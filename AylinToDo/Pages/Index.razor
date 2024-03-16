@@ -3,48 +3,66 @@
 @inject IToDoService _toDoService
 
 <PageTitle>AylinToDo</PageTitle>
-<div>
-<EditForm Model="@NewItem" OnSubmit="@AddItem">
-    <div style="display: flex; align-items: center; width: 400px;">
-        <div style="margin-right: 10px">Yapılacak:</div>
-        <InputText @bind-Value="NewItem.Text" class="form-control" style="margin-right: 10px" id="Item" />
-        <input type="submit" class="btn btn-primary" style="margin-right: 10px" value="Ekle" />
-        <input type="reset" class="btn btn-secondary" value="Temizle" />
-    </div>
-</EditForm>
-</div>
-<div class="border" style="padding: 20px; margin-top: 20px;">
-    <div style="display: flex; flex-direction:column">
-        <h2>Yapılacaklar</h2>
-        @foreach (var todo in Todos)
-        {
-            <div class="@ItemClass(todo)" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <div style="color: @TextColor(todo);">@todo.Text</div>
-                @if (todo.IsDone)
-                {
-                    <div>
-                        <button class="btn btn-warning" @onclick="() => UncompleteItem(todo)">Tamamlanmadı</button>
-                    </div>
-                }
-                else
-                {
-                    <div>
-                        <button class="btn btn-success" @onclick="() => CompleteItem(todo)">Tamamlandı</button>
-                    </div>
-                }
-                <div>
-                    <button class="btn btn-danger" @onclick="() => DeleteItem(todo)">Sil</button>
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">AylinToDo</h1>
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+    <form @onsubmit="@AddItem" class="mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <input type="text" @bind="@NewItem.Text" class="form-control" placeholder="Yapılacak" required />
+                <div class="invalid-feedback">
+                    Bu alan boş bırakılamaz.
                 </div>
             </div>
-        }
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Ekle</button>
+                <button type="reset" class="btn btn-secondary">Temizle</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="border p-4 todo-list">
+        <h2>Yapılacaklar</h2>
+        <div class="scrollable">
+            @foreach (var todo in Todos)
+            {
+                <div class="d-flex justify-content-between align-items-center mb-3 @ItemClass(todo)">
+                    <div style="color: @TextColor(todo);">@todo.Text</div>
+                    @if (todo.IsDone)
+                    {
+                        <div>
+                            <button class="btn btn-warning" @onclick="() => UncompleteItem(todo)">
+                                Tamamlanmadı
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <button class="btn btn-success" @onclick="() => CompleteItem(todo)">
+                                Tamamlandı
+                            </button>
+                        </div>
+                    }
+                    <div>
+                        <button class="btn btn-danger" @onclick="() => DeleteItem(todo)">Sil</button>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
-
 @code {
-
     private IList<ToDoItems> Todos = new List<ToDoItems>();
     private ToDoItems NewItem = new ToDoItems("");
+    private string ErrorMessage = "";
 
     protected override void OnInitialized()
     {
@@ -58,12 +76,12 @@
 
     public string ItemClass(ToDoItems todo)
     {
-        return todo.IsDone ? "item.IsDone" : "";
+        return todo.IsDone ? "completed-item" : "";
     }
 
     public string TextColor(ToDoItems todo)
     {
-        return todo.IsDone ? "#00c6ff" : "#ffc78d";
+        return todo.IsDone ? "red" : "#00c6ff";
     }
 
     private void HandleItemAdded()
@@ -80,6 +98,7 @@
     public void CompleteItem(ToDoItems item)
     {
         _toDoService.Complete(item);
+        item.IsDone = true; // İlgili öğenin durumunu tamamlandı olarak işaretleyin
         RefreshTodos();
     }
 
@@ -89,13 +108,25 @@
         RefreshTodos();
     }
 
-    public void AddItem()
+    public async Task AddItem()
     {
+        if (string.IsNullOrWhiteSpace(NewItem.Text))
+        {
+            ErrorMessage = "Öğe metni boş olamaz.";
+            return;
+        }
+
+        if (Todos.Any(todo => todo.Text == NewItem.Text))
+        {
+            ErrorMessage = "Bu öğe zaten var.";
+            return;
+        }
+
         var newItem = new ToDoItems(NewItem.Text);
         _toDoService.Add(newItem);
 
         NewItem.Text = "";
-
-        HandleItemAdded();
+        ErrorMessage = "";
+        RefreshTodos();
     }
 }
