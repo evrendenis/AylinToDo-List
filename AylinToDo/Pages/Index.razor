@@ -1,0 +1,101 @@
+﻿@page "/"
+@using AylinToDo.Services
+@inject IToDoService _toDoService
+
+<PageTitle>AylinToDo</PageTitle>
+<div>
+<EditForm Model="@NewItem" OnSubmit="@AddItem">
+    <div style="display: flex; align-items: center; width: 400px;">
+        <div style="margin-right: 10px">Yapılacak:</div>
+        <InputText @bind-Value="NewItem.Text" class="form-control" style="margin-right: 10px" id="Item" />
+        <input type="submit" class="btn btn-primary" style="margin-right: 10px" value="Ekle" />
+        <input type="reset" class="btn btn-secondary" value="Temizle" />
+    </div>
+</EditForm>
+</div>
+<div class="border" style="padding: 20px; margin-top: 20px;">
+    <div style="display: flex; flex-direction:column">
+        <h2>Yapılacaklar</h2>
+        @foreach (var todo in Todos)
+        {
+            <div class="@ItemClass(todo)" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div style="color: @TextColor(todo);">@todo.Text</div>
+                @if (todo.IsDone)
+                {
+                    <div>
+                        <button class="btn btn-warning" @onclick="() => UncompleteItem(todo)">Tamamlanmadı</button>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <button class="btn btn-success" @onclick="() => CompleteItem(todo)">Tamamlandı</button>
+                    </div>
+                }
+                <div>
+                    <button class="btn btn-danger" @onclick="() => DeleteItem(todo)">Sil</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+
+    private IList<ToDoItems> Todos = new List<ToDoItems>();
+    private ToDoItems NewItem = new ToDoItems("");
+
+    protected override void OnInitialized()
+    {
+        RefreshTodos();
+    }
+
+    private void RefreshTodos()
+    {
+        Todos = _toDoService.GetAll().ToList();
+    }
+
+    public string ItemClass(ToDoItems todo)
+    {
+        return todo.IsDone ? "item.IsDone" : "";
+    }
+
+    public string TextColor(ToDoItems todo)
+    {
+        return todo.IsDone ? "#00c6ff" : "#ffc78d";
+    }
+
+    private void HandleItemAdded()
+    {
+        RefreshTodos();
+    }
+
+    public void DeleteItem(ToDoItems item)
+    {
+        _toDoService.Delete(item);
+        RefreshTodos();
+    }
+
+    public void CompleteItem(ToDoItems item)
+    {
+        _toDoService.Complete(item);
+        RefreshTodos();
+    }
+
+    public void UncompleteItem(ToDoItems item)
+    {
+        _toDoService.Uncomplete(item);
+        RefreshTodos();
+    }
+
+    public void AddItem()
+    {
+        var newItem = new ToDoItems(NewItem.Text);
+        _toDoService.Add(newItem);
+
+        NewItem.Text = "";
+
+        HandleItemAdded();
+    }
+}
